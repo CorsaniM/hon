@@ -1,9 +1,11 @@
 "use server";
-import { Hono } from "hono";
 import { api } from "~/trpc/server";
+import { Hono } from "hono";
+import { z } from "zod";
+import { db } from "~/server/db";
+import { tickets } from "~/server/db/schema";
 
 const app = new Hono().basePath("api/hono");
-const postDimetallo = new Hono().basePath("api/hono/dimetallo");
 
 app.get("/ticket/:id", async (c) => {
   const ticketId = c.req.param("id");
@@ -15,6 +17,40 @@ app.get("/ticket/:id", async (c) => {
     return c.json("no existe el ticket " + ticketId);
   }
 });
+
+// app.post("/api/hono/dimetallo", async (c) => {
+//   const body = await c.req.json();
+
+//   const TicketSchema = z.object({
+//     orgId: z.string(),
+//     state: z.string(),
+//     urgency: z.number(),
+//     suppUrgency: z.number().optional(),
+//     title: z.string(),
+//     description: z.string(),
+//   });
+
+//   const validation = TicketSchema.safeParse(body);
+
+//   if (!validation.success) {
+//     return c.json({ error: "Invalid data" }, 400);
+//   }
+
+//   const { orgId, state, urgency, title, description } = validation.data;
+
+//   const newTicket = await db
+//     .insert(tickets)
+//     .values({
+//       orgId,
+//       state,
+//       urgency,
+//       title,
+//       description,
+//     })
+//     .returning();
+
+//   return c.json({ success: true, data: newTicket });
+// });
 
 app.get("/ticket/get/:orgid/:urgency/:title/:description", async (c) => {
   const orgId = c.req.param("orgid");
@@ -29,13 +65,13 @@ app.get("/ticket/get/:orgid/:urgency/:title/:description", async (c) => {
   try {
     const newTicket = await api.tickets.create({
       orgId,
-      state: "nuevo", // Asignar el estado por defecto
+      state: "nuevo",
       urgency,
-      suppUrgency: 0, // Asignar suppUrgency por defecto a 0
+      suppUrgency: 0,
       title,
       description,
     });
-    return c.json("Ticket creado"); // Devuelve el ticket creado con un código 201
+    return c.json("Ticket creado");
   } catch (error) {
     return c.json({ error: "Error creando el ticket" }, 500);
   }
@@ -60,15 +96,10 @@ app.get("/comments/get/:ticketId/:title/:description", async (c) => {
       ticketId: parseInt(ticketId),
       type: "recibido",
     });
-    return c.json("Comentario creado en Ticket " + ticketId + newTicket); // Devuelve el ticket creado con un código 201
+    return c.json("Comentario creado en Ticket " + ticketId + " id"); // Devuelve el ticket creado con un código 201
   } catch (error) {
     return c.json({ error: "Error creando el comentario" }, 500);
   }
-});
-
-postDimetallo.post("/comments/post", async (c) => {
-  // const { id, title, description } = await c.req.json();
-  return c.json("Comentario creado");
 });
 
 app.notFound((c) => {
